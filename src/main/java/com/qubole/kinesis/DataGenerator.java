@@ -1,5 +1,8 @@
 package com.qubole.kinesis;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.commons.cli.CommandLine;
@@ -36,29 +39,29 @@ public class DataGenerator {
     options.addOption(create);
 
     Option stream = Option.builder("n").longOpt("kinesis-stream")
-        .argName("name").desc("kinesis stream to write to (required)").required().build();
+        .argName("name").desc("kinesis stream to write to (required)").hasArg().required().build();
     options.addOption(stream);
 
     Option shards = Option.builder("s").longOpt("num-shards").argName("number")
-        .desc("number of shards").build();
+        .desc("number of shards").hasArg().build();
     options.addOption(shards);
 
     Option rate = Option.builder("r").longOpt("rate-limit").argName("number")
-        .desc("number of records pushed per second (default 1000)").build();
+        .desc("number of records pushed per second (default 1000)").hasArg().build();
     options.addOption(rate);
 
     Option workers = Option.builder("w").longOpt("num-workers")
-        .argName("number").desc("number of workers (default 1)").build();
+        .argName("number").desc("number of workers (default 1)").hasArg().build();
     options.addOption(workers);
 
     Option records = Option.builder("r").longOpt("num-records")
-        .argName("number").desc("total number of records to push (default 1000)").build();
+        .argName("number").desc("total number of records to push (default 1000)").hasArg().build();
     options.addOption(records);
 
     Option sample = Option.builder("f").longOpt("sample-file").argName("file")
-        .desc("sample file to generate records (required)").required().build();
+        .desc("sample file to generate records (required)").hasArg().required().build();
     options.addOption(sample);
-
+    
     return options;
   }
 
@@ -92,6 +95,19 @@ public class DataGenerator {
     if (cmd.hasOption("num-shards") && !cmd.hasOption("create")) {
       usage("shards option can be specified only if create option is enabled",
           1);
+    }
+    String sample = cmd.getOptionValue("f");
+    LOGGER.log(Level.INFO, "opening file " + sample);
+    FileInputStream f = null;
+    try {
+      f = new FileInputStream(sample);
+    } catch (FileNotFoundException e) {
+      usage("sample file " + sample + " not found", 1);
+    }
+    RecordReader rr = new RecordReader(f);
+    while(rr.hasNext()) {
+      Record rec = rr.next();
+      LOGGER.log(Level.INFO, "record " + rec);
     }
   }
 }
