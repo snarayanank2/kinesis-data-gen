@@ -27,6 +27,11 @@
     <fileSet>
       <directory>${project.basedir}/src/main/bin</directory>
       <outputDirectory>/bin</outputDirectory>
+      <fileMode>0755</fileMode>
+    </fileSet>
+    <fileSet>
+      <directory>${project.basedir}/src/main/etc</directory>
+      <outputDirectory>/etc</outputDirectory>
     </fileSet>
   </fileSets>
 </assembly>

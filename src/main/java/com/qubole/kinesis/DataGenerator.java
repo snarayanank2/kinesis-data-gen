@@ -104,10 +104,14 @@ public class DataGenerator {
     } catch (FileNotFoundException e) {
       usage("sample file " + sample + " not found", 1);
     }
+    long t1 = System.nanoTime();
     RecordReader rr = new RecordReader(f);
     while(rr.hasNext()) {
       Record rec = rr.next();
-      LOGGER.log(Level.INFO, "record " + rec);
     }
+    long t2 = System.nanoTime();
+    LOGGER.log(Level.INFO, "Read " + rr.getNumRecords() + " records");
+    LOGGER.log(Level.INFO, "Skipped " + rr.getSkippedRecords() + " records");
+    LOGGER.log(Level.INFO, "Total time " + (t2 - t1) / Math.pow(10, 9) + " seconds");
   }
 }
