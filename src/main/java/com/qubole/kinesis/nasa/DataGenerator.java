@@ -175,13 +175,12 @@ public class DataGenerator {
           1);
     }
     String sample = cmd.getOptionValue("sample-file");
+    int workers = Integer.parseInt(cmd.getOptionValue("num-workers", "1"));
     if (cmd.hasOption("parse-only")) {
-      int workers = Integer.parseInt(cmd.getOptionValue("workers", "1"));
       parseRecords(sample, workers);
       System.exit(0);
     }
     if (cmd.hasOption("read-only")) {
-      int workers = Integer.parseInt(cmd.getOptionValue("workers", "1"));
       readLines(sample, workers);
       System.exit(0);      
     }

@@ -32,11 +32,11 @@ public class RecordParser implements StreamConsumer<String> {
     }
   }
 
-  private static Pattern pattern = Pattern
+  private Pattern pattern = Pattern
       .compile("(?<ip>\\w+(\\.\\w+)*)\\s\\-\\s\\-\\s\\[(?<ts>.*)\\]\\s\\\"(?<req>.*)\\\"\\s(?<code>\\d+)\\s(?<bytes>(\\d+|\\-))");
 
   // 01/Jul/1995:00:00:09 -0400
-  private static DateTimeFormatter dtf = DateTimeFormat
+  private DateTimeFormatter dtf = DateTimeFormat
       .forPattern("dd/MMM/YYYY:HH:mm:ss Z");
 
   private Record parseRecord(String line) {

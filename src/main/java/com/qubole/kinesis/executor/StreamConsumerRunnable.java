@@ -6,7 +6,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.qubole.kinesis.core.StreamConsumer;
-import com.qubole.kinesis.nasa.Record;
 
 public class StreamConsumerRunnable<T> implements Runnable {
   private final static Logger LOGGER = Logger
@@ -15,6 +14,7 @@ public class StreamConsumerRunnable<T> implements Runnable {
   private ArrayBlockingQueue<T> queue;
   private boolean producerDone = false;
   private StreamConsumer<T> consumer;
+  private long noOpCounter = 0;
 
   public StreamConsumerRunnable(StreamConsumer<T> consumer, ArrayBlockingQueue<T> queue) {
     this.consumer = consumer;
@@ -32,7 +32,6 @@ public class StreamConsumerRunnable<T> implements Runnable {
   @Override
   public void run() {
     consumer.start();
-    long t1 = System.nanoTime();
     while (true) {
       try {
         // LOGGER.log(Level.INFO, "consumer waiting to take.");
@@ -40,15 +39,16 @@ public class StreamConsumerRunnable<T> implements Runnable {
         if (rec != null) {
           consumer.process(rec);
         } else {
+          noOpCounter++;
           if (getProducerDone()) {
             break;
           }
         }
       } catch (InterruptedException e) {
-        LOGGER.log(Level.INFO, "consumer is interrupted. stopping.");
-        break;
+        LOGGER.log(Level.INFO, "consumer is interrupted.. ignoring");
       }
     }
     consumer.end();
+    LOGGER.log(Level.INFO, "no-op count " + noOpCounter);
   }  
 }
