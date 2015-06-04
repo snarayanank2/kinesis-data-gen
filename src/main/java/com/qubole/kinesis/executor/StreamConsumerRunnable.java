@@ -35,7 +35,7 @@ public class StreamConsumerRunnable<T> implements Runnable {
     while (true) {
       try {
         // LOGGER.log(Level.INFO, "consumer waiting to take.");
-        T rec = queue.poll(50, TimeUnit.MILLISECONDS);
+        T rec = queue.poll(100, TimeUnit.MILLISECONDS);
         if (rec != null) {
           consumer.process(rec);
         } else {

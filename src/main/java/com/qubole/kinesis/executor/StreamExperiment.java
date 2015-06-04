@@ -39,7 +39,7 @@ public class StreamExperiment<T> {
     this.service = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(consumers.size() + 1));
     this.producer = producer;
     this.consumers = consumers;
-    this.queue = Queues.newArrayBlockingQueue(200000);
+    this.queue = Queues.newArrayBlockingQueue(2000000);
     
   }
 
