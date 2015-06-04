@@ -1,6 +1,6 @@
 package com.qubole.kinesis.executor;
 
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingDeque;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -11,8 +11,8 @@ public class StreamProducerRunnable<T> implements Runnable {
       .getName());
 
   private StreamProducer<T> rr;
-  private ArrayBlockingQueue<T> queue;
-  public StreamProducerRunnable(StreamProducer<T> rr, ArrayBlockingQueue<T> queue) {
+  private BlockingDeque<T> queue;
+  public StreamProducerRunnable(StreamProducer<T> rr, BlockingDeque<T> queue) {
     this.rr = rr;
     this.queue = queue;
   }

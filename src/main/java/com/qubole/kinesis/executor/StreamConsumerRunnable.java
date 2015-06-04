@@ -1,6 +1,6 @@
 package com.qubole.kinesis.executor;
 
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -11,12 +11,12 @@ public class StreamConsumerRunnable<T> implements Runnable {
   private final static Logger LOGGER = Logger
       .getLogger(StreamConsumerRunnable.class.getName());
 
-  private ArrayBlockingQueue<T> queue;
+  private BlockingDeque<T> queue;
   private boolean producerDone = false;
   private StreamConsumer<T> consumer;
   private long noOpCounter = 0;
 
-  public StreamConsumerRunnable(StreamConsumer<T> consumer, ArrayBlockingQueue<T> queue) {
+  public StreamConsumerRunnable(StreamConsumer<T> consumer, BlockingDeque<T> queue) {
     this.consumer = consumer;
     this.queue = queue;
   }

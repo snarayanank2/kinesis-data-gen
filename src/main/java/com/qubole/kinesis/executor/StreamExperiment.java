@@ -2,7 +2,7 @@ package com.qubole.kinesis.executor;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -23,7 +23,7 @@ public class StreamExperiment<T> {
   private ListeningExecutorService service;
   private StreamProducer<T> producer;
   private List<StreamConsumer<T>> consumers;
-  private ArrayBlockingQueue<T> queue;
+  private BlockingDeque<T> queue;
 
   public StreamExperiment(StreamProducer<T> producer, StreamConsumer<T> consumer) {
     List<StreamConsumer<T>> consumers = new ArrayList<StreamConsumer<T>>(50);
@@ -39,8 +39,7 @@ public class StreamExperiment<T> {
     this.service = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(consumers.size() + 1));
     this.producer = producer;
     this.consumers = consumers;
-    this.queue = Queues.newArrayBlockingQueue(2000000);
-    
+    this.queue = Queues.newLinkedBlockingDeque();    
   }
 
   public void runExperiment() throws InterruptedException, ExecutionException, TimeoutException {
