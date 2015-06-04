@@ -2,6 +2,8 @@ package com.qubole.kinesis.nasa;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
@@ -15,6 +17,8 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
+import com.qubole.kinesis.core.NullConsumer;
+import com.qubole.kinesis.core.StreamConsumer;
 import com.qubole.kinesis.executor.StreamExperiment;
 
 public class DataGenerator {
@@ -76,6 +80,10 @@ public class DataGenerator {
         .desc("only parse the sample file").build();
     options.addOption(parseOnly);
 
+    Option readOnly = Option.builder("r").longOpt("read-only")
+        .desc("only read the sample file, no parsing").build();
+    options.addOption(readOnly);
+
     return options;
   }
 
@@ -121,9 +129,31 @@ public class DataGenerator {
       usage("sample file " + sample + " not found", 1);
     }
     com.qubole.kinesis.text.FileLineReader rr = new com.qubole.kinesis.text.FileLineReader(is);
-    RecordParser consumer = new RecordParser();
-    StreamExperiment<String> experiment = new StreamExperiment<String>(workers + 1, rr,
-        consumer);
+    List<StreamConsumer<String>> consumers = new ArrayList<StreamConsumer<String>>(workers);
+    for (int i = 0 ;i < workers; i++) {
+      consumers.add(new RecordParser());
+    }
+    StreamExperiment<String> experiment = new StreamExperiment<String>(rr,
+        consumers);
+    experiment.runExperiment();
+  }
+
+  private static void readLines(String sample, int workers) throws InterruptedException,
+  ExecutionException, TimeoutException {
+    LOGGER.log(Level.INFO, "opening file " + sample);
+    FileInputStream is = null;
+    try {
+      is = new FileInputStream(sample);
+    } catch (FileNotFoundException e) {
+      usage("sample file " + sample + " not found", 1);
+    }
+    com.qubole.kinesis.text.FileLineReader rr = new com.qubole.kinesis.text.FileLineReader(is);
+    List<StreamConsumer<String>> consumers = new ArrayList<StreamConsumer<String>>(workers);
+    for (int i = 0 ;i < workers; i++) {
+      consumers.add(new NullConsumer<String>());
+    }
+    StreamExperiment<String> experiment = new StreamExperiment<String>(rr,
+        consumers);
     experiment.runExperiment();
   }
 
@@ -149,6 +179,11 @@ public class DataGenerator {
       int workers = Integer.parseInt(cmd.getOptionValue("workers", "1"));
       parseRecords(sample, workers);
       System.exit(0);
+    }
+    if (cmd.hasOption("read-only")) {
+      int workers = Integer.parseInt(cmd.getOptionValue("workers", "1"));
+      readLines(sample, workers);
+      System.exit(0);      
     }
   }
 }

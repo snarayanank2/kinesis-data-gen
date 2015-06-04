@@ -50,7 +50,7 @@ public class RecordReaderTest {
     InputStream is = this.getClass().getResourceAsStream("/sample_data.txt");
     FileLineReader rr = new FileLineReader(is);
     NullConsumer<String> consumer = new NullConsumer<String>();
-    StreamExperiment<String> experiment = new StreamExperiment<String>(3, rr, consumer);
+    StreamExperiment<String> experiment = new StreamExperiment<String>(rr, consumer);
     experiment.runExperiment();
     Assert.assertEquals("producer record counting is off", 9, rr.records());
     Assert.assertEquals("consumer record counting is off", 9, consumer.records());

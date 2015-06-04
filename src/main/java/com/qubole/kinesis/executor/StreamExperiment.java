@@ -25,19 +25,22 @@ public class StreamExperiment<T> {
   private List<StreamConsumer<T>> consumers;
   private ArrayBlockingQueue<T> queue;
 
-  public StreamExperiment(int workers, StreamProducer<T> producer, StreamConsumer<T> consumer) {
-    service = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(workers));
-    this.producer = producer;
-    this.consumers = new ArrayList<StreamConsumer<T>>(10);
+  public StreamExperiment(StreamProducer<T> producer, StreamConsumer<T> consumer) {
+    List<StreamConsumer<T>> consumers = new ArrayList<StreamConsumer<T>>(50);
     consumers.add(consumer);
-    this.queue = Queues.newArrayBlockingQueue(100000);
+    initialize(producer, consumers);
   }
 
-  public StreamExperiment(int workers, StreamProducer<T> producer, List<StreamConsumer<T>> consumers) {
-    service = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(workers));
+  public StreamExperiment(StreamProducer<T> producer, List<StreamConsumer<T>> consumers) {
+    initialize(producer, consumers);
+  }
+
+  private void initialize(StreamProducer<T> producer, List<StreamConsumer<T>> consumers) {
+    this.service = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(consumers.size() + 1));
     this.producer = producer;
     this.consumers = consumers;
-    this.queue = Queues.newArrayBlockingQueue(10000);
+    this.queue = Queues.newArrayBlockingQueue(200000);
+    
   }
 
   public void runExperiment() throws InterruptedException, ExecutionException, TimeoutException {
