@@ -1,19 +1,23 @@
-package com.qubole.kinesis;
+package com.qubole.kinesis.executor;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class DiscardingRecordConsumer implements Runnable {
+import com.qubole.kinesis.core.StreamConsumer;
+import com.qubole.kinesis.nasa.Record;
+
+public class StreamConsumerRunnable<T> implements Runnable {
   private final static Logger LOGGER = Logger
-      .getLogger(DiscardingRecordConsumer.class.getName());
+      .getLogger(StreamConsumerRunnable.class.getName());
 
-  private ArrayBlockingQueue<Record> queue;
-  private int numRecords = 0;
+  private ArrayBlockingQueue<T> queue;
   private boolean producerDone = false;
+  private StreamConsumer<T> consumer;
 
-  public DiscardingRecordConsumer(ArrayBlockingQueue<Record> queue) {
+  public StreamConsumerRunnable(StreamConsumer<T> consumer, ArrayBlockingQueue<T> queue) {
+    this.consumer = consumer;
     this.queue = queue;
   }
 
@@ -27,14 +31,14 @@ public class DiscardingRecordConsumer implements Runnable {
 
   @Override
   public void run() {
+    consumer.start();
     long t1 = System.nanoTime();
     while (true) {
       try {
         // LOGGER.log(Level.INFO, "consumer waiting to take.");
-        Record rec = queue.poll(1, TimeUnit.SECONDS);
+        T rec = queue.poll(50, TimeUnit.MILLISECONDS);
         if (rec != null) {
-          // LOGGER.log(Level.INFO, "consumer got a record " + rec);
-          numRecords++;
+          consumer.process(rec);
         } else {
           if (getProducerDone()) {
             break;
@@ -45,14 +49,6 @@ public class DiscardingRecordConsumer implements Runnable {
         break;
       }
     }
-    long t2 = System.nanoTime();
-    double seconds = (t2 - t1) / Math.pow(10, 9);
-    LOGGER.log(Level.INFO, "Read " + numRecords + " records");
-    LOGGER.log(Level.INFO, "Total time " + seconds + " seconds");
-    LOGGER.log(Level.INFO, "Records per second " + (numRecords / seconds));
-  }
-  
-  public int getNumRecords() {
-    return numRecords;
-  }
+    consumer.end();
+  }  
 }

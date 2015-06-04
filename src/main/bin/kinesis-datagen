@@ -7,4 +7,4 @@ do
     CP="$CP:$j"
 done
 
-exec java -cp $CP com.qubole.kinesis.DataGenerator "$@"
+exec java -cp $CP com.qubole.kinesis.nasa.DataGenerator "$@"

@@ -1,12 +1,8 @@
-package com.qubole.kinesis;
+package com.qubole.kinesis.nasa;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.util.List;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -19,11 +15,7 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
-import com.google.common.collect.Queues;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
+import com.qubole.kinesis.executor.StreamExperiment;
 
 public class DataGenerator {
   private final static Logger LOGGER = Logger.getLogger(DataGenerator.class
@@ -101,54 +93,40 @@ public class DataGenerator {
     System.exit(code);
   }
 
-  private static void parseRecords(String sample) throws InterruptedException, ExecutionException, TimeoutException {
-    LOGGER.log(Level.INFO, "opening file " + sample);
-    FileInputStream f = null;
-    try {
-      f = new FileInputStream(sample);
-    } catch (FileNotFoundException e) {
-      usage("sample file " + sample + " not found", 1);
-    }
-    long t1 = System.nanoTime();
-    RecordReader rr = new RecordReader(f);
-    ListeningExecutorService service = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(4));
-    ArrayBlockingQueue<Record> queue = Queues.newArrayBlockingQueue(10000);
-    RecordProducer producer = new RecordProducer(rr, queue);
-    DiscardingRecordConsumer consumer1 = new DiscardingRecordConsumer(queue);
-    DiscardingRecordConsumer consumer2 = new DiscardingRecordConsumer(queue);
-    service.submit(consumer1);
-    service.submit(consumer2);
-    ListenableFuture<?> producerFuture = service.submit(producer);
-    producerFuture.get();
-    consumer1.setProducerDone();
-    consumer2.setProducerDone();
-    service.shutdown();
-    service.awaitTermination(40, TimeUnit.SECONDS);
-  }
-
   /*
-  private static void parseRecords(String sample) {
+  private static void parseRecords(String sample, int workers) throws InterruptedException,
+      ExecutionException, TimeoutException {
     LOGGER.log(Level.INFO, "opening file " + sample);
-    FileInputStream f = null;
+    FileInputStream is = null;
     try {
-      f = new FileInputStream(sample);
+      is = new FileInputStream(sample);
     } catch (FileNotFoundException e) {
       usage("sample file " + sample + " not found", 1);
     }
-    long t1 = System.nanoTime();
-    RecordReader rr = new RecordReader(f);
-    while (rr.hasNext()) {
-      rr.next();
-    }
-    long t2 = System.nanoTime();
-    double seconds = (t2 - t1) / Math.pow(10, 9);
-    LOGGER.log(Level.INFO, "Read " + rr.getNumRecords() + " records");
-    LOGGER.log(Level.INFO, "Skipped " + rr.getSkippedRecords() + " records");
-    LOGGER.log(Level.INFO, "Total time " + seconds + " seconds");
-    LOGGER.log(Level.INFO, "Records per second " + (rr.getNumRecords() / seconds));
+    FileRecordReader rr = new FileRecordReader(is);
+    NullConsumer<Record> consumer = new NullConsumer<Record>();
+    StreamExperiment<Record> experiment = new StreamExperiment<Record>(workers + 1, rr,
+        consumer);
+    experiment.runExperiment();
   }
 */
   
+  private static void parseRecords(String sample, int workers) throws InterruptedException,
+  ExecutionException, TimeoutException {
+    LOGGER.log(Level.INFO, "opening file " + sample);
+    FileInputStream is = null;
+    try {
+      is = new FileInputStream(sample);
+    } catch (FileNotFoundException e) {
+      usage("sample file " + sample + " not found", 1);
+    }
+    com.qubole.kinesis.text.FileLineReader rr = new com.qubole.kinesis.text.FileLineReader(is);
+    RecordParser consumer = new RecordParser();
+    StreamExperiment<String> experiment = new StreamExperiment<String>(workers + 1, rr,
+        consumer);
+    experiment.runExperiment();
+  }
+
   public static void main(String args[]) throws InterruptedException, ExecutionException, TimeoutException {
     CommandLineParser parser = new DefaultParser();
     Options options = getOptions();
@@ -168,7 +146,8 @@ public class DataGenerator {
     }
     String sample = cmd.getOptionValue("sample-file");
     if (cmd.hasOption("parse-only")) {
-      parseRecords(sample);
+      int workers = Integer.parseInt(cmd.getOptionValue("workers", "1"));
+      parseRecords(sample, workers);
       System.exit(0);
     }
   }

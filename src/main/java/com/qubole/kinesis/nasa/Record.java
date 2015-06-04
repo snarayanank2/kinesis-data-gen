@@ -1,4 +1,4 @@
-package com.qubole.kinesis;
+package com.qubole.kinesis.nasa;
 
 import org.joda.time.DateTime;
 
