@@ -17,6 +17,10 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
+import com.amazonaws.services.kinesis.AmazonKinesisClient;
+import com.amazonaws.services.kinesis.model.DescribeStreamResult;
+import com.amazonaws.services.kinesis.model.ResourceNotFoundException;
 import com.qubole.kinesis.core.NullConsumer;
 import com.qubole.kinesis.core.StreamConsumer;
 import com.qubole.kinesis.executor.StreamExperiment;
@@ -24,15 +28,6 @@ import com.qubole.kinesis.executor.StreamExperiment;
 public class DataGenerator {
   private final static Logger LOGGER = Logger.getLogger(DataGenerator.class
       .getName());
-
-  private String stream = "";
-  private boolean create = false;
-  private int shards = 10;
-  private int rate = 1000;
-  private boolean verbose = false;
-  private int workers = 1;
-  private int records = 1000;
-  private String sample = "";
 
   private static Options getOptions() {
     Options options = new Options();
@@ -91,6 +86,35 @@ public class DataGenerator {
     usage(null, code);
   }
 
+  private static void safeDeleteStream(AmazonKinesisClient client, String stream) {
+    while (true) {
+      try {
+        LOGGER.log(Level.INFO, "trying to delete " + stream);
+        client.deleteStream(stream);
+        Thread.sleep(2000);
+      } catch (ResourceNotFoundException e) {
+        LOGGER.log(Level.INFO, "stream " + stream + " not found");
+        break;
+      } catch (InterruptedException e) {
+      }
+    }
+  }
+
+  private static void safeCreateStream(AmazonKinesisClient client, String stream, int shards) {
+    client.createStream(stream, shards);
+    DescribeStreamResult desc = client.describeStream(stream);
+    LOGGER.log(Level.INFO, "waiting for stream to become active");
+    LOGGER.log(Level.INFO, desc.getStreamDescription().getStreamStatus());
+    while (!desc.getStreamDescription().getStreamStatus().toLowerCase().trim().equals("active")) {
+      try {
+        Thread.sleep(2000);
+      } catch (InterruptedException e) {
+      }
+      desc = client.describeStream(stream);
+      LOGGER.log(Level.INFO, desc.getStreamDescription().getStreamStatus());
+    }
+  }
+
   private static void usage(String header, int code) {
     HelpFormatter formatter = new HelpFormatter();
     if (header != null) {
@@ -100,24 +124,6 @@ public class DataGenerator {
     }
     System.exit(code);
   }
-
-  /*
-  private static void parseRecords(String sample, int workers) throws InterruptedException,
-      ExecutionException, TimeoutException {
-    LOGGER.log(Level.INFO, "opening file " + sample);
-    FileInputStream is = null;
-    try {
-      is = new FileInputStream(sample);
-    } catch (FileNotFoundException e) {
-      usage("sample file " + sample + " not found", 1);
-    }
-    FileRecordReader rr = new FileRecordReader(is);
-    NullConsumer<Record> consumer = new NullConsumer<Record>();
-    StreamExperiment<Record> experiment = new StreamExperiment<Record>(workers + 1, rr,
-        consumer);
-    experiment.runExperiment();
-  }
-*/
   
   private static void parseRecords(String sample, int workers) throws InterruptedException,
   ExecutionException, TimeoutException {
@@ -184,5 +190,16 @@ public class DataGenerator {
       readLines(sample, workers);
       System.exit(0);      
     }
+    AmazonKinesisClient kinClient = new AmazonKinesisClient(new DefaultAWSCredentialsProviderChain());
+    String stream = cmd.getOptionValue("kinesis-stream");
+    if (cmd.hasOption("create")) {
+      if (!cmd.hasOption("num-shards")) {
+        usage("must supply number of shards if create is enabled", 1);
+      }
+      int shards = Integer.parseInt(cmd.getOptionValue("num-shards"));
+      safeDeleteStream(kinClient, stream);
+      safeCreateStream(kinClient, stream, shards);
+    }
+    kinClient.shutdown();
   }
 }
