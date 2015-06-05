@@ -99,9 +99,8 @@ public class DataGenerator {
       }
     }
   }
-
-  private static void safeCreateStream(AmazonKinesisClient client, String stream, int shards) {
-    client.createStream(stream, shards);
+  
+  private static void safeCheckStream(AmazonKinesisClient client, String stream) {
     DescribeStreamResult desc = client.describeStream(stream);
     LOGGER.log(Level.INFO, "waiting for stream to become active");
     LOGGER.log(Level.INFO, desc.getStreamDescription().getStreamStatus());
@@ -112,7 +111,11 @@ public class DataGenerator {
       }
       desc = client.describeStream(stream);
       LOGGER.log(Level.INFO, desc.getStreamDescription().getStreamStatus());
-    }
+    }    
+  }
+
+  private static void safeCreateStream(AmazonKinesisClient client, String stream, int shards) {
+    client.createStream(stream, shards);
   }
 
   private static void usage(String header, int code) {
@@ -163,6 +166,28 @@ public class DataGenerator {
     experiment.runExperiment();
   }
 
+  private static void pushRecords(String sample, int workers,
+      AmazonKinesisClient client, String stream) throws InterruptedException,
+      ExecutionException, TimeoutException {
+    LOGGER.log(Level.INFO, "opening file " + sample);
+    FileInputStream is = null;
+    try {
+      is = new FileInputStream(sample);
+    } catch (FileNotFoundException e) {
+      usage("sample file " + sample + " not found", 1);
+    }
+    com.qubole.kinesis.text.FileLineReader rr = new com.qubole.kinesis.text.FileLineReader(
+        is);
+    List<StreamConsumer<String>> consumers = new ArrayList<StreamConsumer<String>>(
+        workers);
+    for (int i = 0; i < workers; i++) {
+      consumers.add(new KinesisRecordPusher(client, stream));
+    }
+    StreamExperiment<String> experiment = new StreamExperiment<String>(rr,
+        consumers);
+    experiment.runExperiment();
+  }
+
   public static void main(String args[]) throws InterruptedException, ExecutionException, TimeoutException {
     CommandLineParser parser = new DefaultParser();
     Options options = getOptions();
@@ -200,6 +225,8 @@ public class DataGenerator {
       safeDeleteStream(kinClient, stream);
       safeCreateStream(kinClient, stream, shards);
     }
+    safeCheckStream(kinClient, stream);
+    pushRecords(sample, workers, kinClient, stream);
     kinClient.shutdown();
   }
 }

@@ -2,11 +2,21 @@ package com.qubole.kinesis.nasa;
 
 import org.joda.time.DateTime;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Record {
   private String host;
+  
   private DateTime timestamp;
+  
   private String request;
+
+  @JsonProperty("code")
   private int replyCode;
+  
+  @JsonProperty("bytes")
   private int replyBytes;
 
   public Record() {
@@ -66,5 +76,5 @@ public class Record {
     return "Record [host=" + host + ", timestamp=" + timestamp + ", request="
         + request + ", replyCode=" + replyCode + ", replyBytes=" + replyBytes
         + "]";
-  }
+  }  
 }
