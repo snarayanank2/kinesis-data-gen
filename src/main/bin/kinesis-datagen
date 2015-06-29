@@ -1,6 +1,6 @@
 #!/bin/bash
 
-LIB="$(dirname $(realpath $0))/../lib"
+LIB="$(dirname $(readlink -f $0))/../lib"
 CP="."
 for j in ${LIB}/*.jar
 do
