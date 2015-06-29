@@ -1,10 +1,13 @@
 #!/bin/bash
 
 LIB="$(dirname $(readlink -f $0))/../lib"
+ETC="$(dirname $(readlink -f $0))/../etc"
+LOGGING="${ETC}/logging.properties"
+
 CP="."
 for j in ${LIB}/*.jar
 do
     CP="$CP:$j"
 done
 
-exec java -cp $CP com.qubole.kinesis.nasa.DataGenerator "$@"
+exec java -Djava.util.logging.config.file="${LOGGING}" -cp $CP com.qubole.kinesis.nasa.DataGenerator "$@"
